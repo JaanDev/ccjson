@@ -58,11 +58,8 @@ impl<'a> TryFrom<&Token<'a>> for String {
 
                 while let Some(c) = iter.next() {
                     let cp = c as u32;
-                    match cp {
-                        0x00..=0x1F => {
-                            return Err(Box::new(JsonError::UnescapedChar { c: cp as u8 }));
-                        }
-                        _ => {}
+                    if let 0x00..=0x1F = cp {
+                        return Err(Box::new(JsonError::UnescapedChar { c: cp as u8 }));
                     }
 
                     if escape_next {
@@ -147,7 +144,7 @@ impl<'a> TryFrom<&Token<'a>> for bool {
             TokenType::Bool => match value.data {
                 "true" => Ok(true),
                 "false" => Ok(false),
-                _ => panic!("{}", value.data),
+                _ => unreachable!(),
             },
             _ => Err(Box::new(JsonError::WrongToken {
                 got: value.token_type.clone(),
@@ -239,7 +236,7 @@ impl JsonValue {
         }
     }
 
-    fn parse_tokens(str: &str) -> Result<Vec<Token>, Box<dyn Error>> {
+    fn parse_tokens(str: &str) -> Result<Vec<Token<'_>>, Box<dyn Error>> {
         let mut tokens: Vec<Token> = Vec::new();
 
         let mut cur_type = TokenType::CurvedBraceOpen;
@@ -247,7 +244,7 @@ impl JsonValue {
         let mut escape_next = false;
         let mut cur_keyword: Option<usize> = None;
 
-        for (i, c) in str.chars().enumerate() {
+        for (i, c) in str.char_indices() {
             if c.is_whitespace() {
                 continue;
             }
@@ -340,10 +337,8 @@ impl JsonValue {
                 }
                 _ => {
                     escape_next = false;
-                    if cur_type != TokenType::String {
-                        if cur_keyword.is_none() {
-                            cur_keyword = Some(i);
-                        }
+                    if cur_type != TokenType::String && cur_keyword.is_none() {
+                        cur_keyword = Some(i);
                     }
                 }
             }
@@ -608,10 +603,6 @@ impl JsonValue {
 
     pub fn build_from_string(str: &str) -> Result<Self, Box<dyn Error>> {
         let tokens = Self::parse_tokens(str)?;
-
-        if tokens.len() == 0 {
-            return Err(Box::new(JsonError::EmptyFile));
-        }
 
         let mut tokens = tokens.windows(2).peekable();
 
