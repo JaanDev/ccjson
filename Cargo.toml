@@ -1,0 +1,9 @@
+[package]
+name = "ccjson"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.6.1", features = ["derive"] }
+regex = "1.13.0"
+test_each_file = "0.3.7"
